@@ -22,8 +22,8 @@
          @foreach($users as $user  )
         <tr>
             <td>{{$user->id}}</td>
-            <th><img height="100" src="{{$user->photo ?  $user->photo->getPhotoUrl($user->photo->file): 'no user photo' }}"></th>
-            <td>{{$user->name}}</td>
+            <th><img height="50" src="{{$user->photo ?  $user->photo->getPhotoUrl($user->photo->file): $user->photo->getPhotoUrl()}}" alt="user photo"></th>
+            <td><a href="{{route('users.edit',$user->id)}}">{{$user->name}}</a></td>
             <td>{{$user->email}}</td>
             <td>{{$user->role ? $user->role->name : 'user has no role'}}</td>
             <td>{{$user->is_active = 1 ? 'Active' : 'Not Active'}}</td>

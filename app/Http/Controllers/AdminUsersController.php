@@ -4,10 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\UsersRequest;
 use Illuminate\Http\Request;
-use App\User;
+use App\User as User;
 use App\Role;
 use App\Photo;
-use Illuminate\Database\Eloquent\Model;
 
 class AdminUsersController extends Controller
 {
@@ -18,7 +17,12 @@ class AdminUsersController extends Controller
      */
     public function index()
     {
-        $users = User::with('role')->get();
+        $users = User::with(['role','photo'])->get();
+        foreach ($users as $user) {
+            if(!isset($user['photo'])){
+                $user['photo'] = new Photo(['file'=>'']);
+            }
+        }
 
         return view('admin.users.index', compact('users'));
     }
@@ -42,9 +46,15 @@ class AdminUsersController extends Controller
      */
     public function store(UsersRequest $request)
     {
-        $input = $request->all();
+        if(trim($request->password ='')){
+            $input = $request->except('password');
+        }else{
+            $input = $request->all();
+            $input['password'] = bcrypt($request->password);
+        }
 
-        if($photo = $input['photo']){
+
+        if($photo = isset($input['photo'])){
 
             $name = time() . $photo->getClientOriginalName();
 
@@ -57,6 +67,7 @@ class AdminUsersController extends Controller
         }
 
         $input['password'] = bcrypt($request->password);
+
         User::create($input);
 
         return redirect('admin/users');
@@ -82,7 +93,14 @@ class AdminUsersController extends Controller
      */
     public function edit($id)
     {
-        //
+        $user = User::findOrFail($id);
+        if(!$user->photo){
+            $user['photo'] = new Photo(['file' => '']);
+        }
+
+        $roles = Role::pluck('name','id')->all();
+
+        return view ('admin.users.edit',compact('user','roles'));
     }
 
     /**
@@ -92,9 +110,28 @@ class AdminUsersController extends Controller
      * @param  int $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(UsersRequest $request, $id)
     {
-        //
+        $user = User::findOrFail($id);
+        if(trim($request->password ='')){
+            $input = $request->except('password');
+
+        }else{
+            $input = $request->all();
+            $input['password'] = bcrypt($request->password);
+        }
+
+        if($newPhoto = $input['photo']){
+            $name = $newPhoto->getClientOriginalName();
+            if(($user->photo && ($name !== $user->photo->file)) || !$user->photo){
+                    $name= time() . $name;
+                    $newPhoto->move('images', $name);
+                    $photo = Photo::create(['file'=>$name]);
+                    $input['photo_id'] = $photo->id;
+            }
+        }
+            $user->update($input);
+            return redirect('admin/users');
     }
 
     /**
